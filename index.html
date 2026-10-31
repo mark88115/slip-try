@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>手機開單試按</title>
+<style>
+:root {
+  --ink: #1e2320; --dim: #5d655f; --bg: #f4f3ee; --card: #ffffff; --line: #d8d6cc;
+  --go: #1f5d4c; --go-ink: #ffffff; --soft: #e4efe9;
+  --warn-bg: #fdf0cf; --warn: #6d4900; --bad: #a32a1c;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 18px/1.45 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+.fake { background: var(--warn-bg); color: var(--warn); font-size: 14px; text-align: center; padding: 6px 16px; }
+#app { max-width: 520px; margin: 0 auto; padding: 8px 16px 170px; }
+h1 { font-size: 26px; margin: 16px 0 4px; }
+h2 { font-size: 24px; margin: 4px 0 12px; }
+p { margin: 8px 0; }
+.dim { color: var(--dim); }
+.small { font-size: 15px; }
+.lab { display: block; font-weight: 600; margin: 18px 0 6px; }
+button { font: inherit; color: inherit; touch-action: manipulation; }
+
+.back { border: 0; background: none; padding: 8px 0; min-height: 44px; color: var(--go); font-weight: 600; }
+.btn {
+  display: block; width: 100%; min-height: 58px; padding: 10px 12px; margin: 0;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; font-weight: 600;
+}
+.btn small { display: block; font-weight: 400; font-size: 14px; color: var(--dim); }
+.btn.go { background: var(--go); border-color: var(--go); color: var(--go-ink); }
+.btn.on { background: var(--soft); border-color: var(--go); color: var(--go); }
+.btn[disabled] { opacity: .45; }
+.btn.add { border-style: dashed; border-color: var(--go); color: var(--go); margin-top: 10px; }
+.btn.del { color: var(--bad); margin-top: 18px; }
+.btn.big { min-height: 76px; font-size: 24px; margin-bottom: 10px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.inline { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+.inline .lab { margin: 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 48px; padding: 8px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; }
+.chip.on { background: var(--soft); border-color: var(--go); color: var(--go); font-weight: 600; }
+
+.inp {
+  display: block; width: 100%; min-height: 54px; padding: 10px 12px; font: inherit;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+}
+.inp:focus { outline: 2px solid var(--go); outline-offset: 1px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.row {
+  display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 58px;
+  padding: 10px 14px; margin-bottom: 8px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; text-align: left;
+}
+.card {
+  display: block; width: 100%; padding: 12px 14px; margin-bottom: 8px; text-align: left;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+}
+.card .sub { color: var(--dim); font-size: 15px; display: block; }
+.card .amt { display: block; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.stepper { display: grid; grid-template-columns: 72px 1fr 72px; gap: 8px; }
+.stepper button { min-height: 58px; font-size: 28px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+.stepper .inp { text-align: center; font-size: 24px; font-weight: 600; }
+
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+}
+.barin { max-width: 488px; margin: 0 auto; }
+.sum { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.sum b { font-size: 24px; font-variant-numeric: tabular-nums; }
+
+.slip { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.sliphead { display: flex; justify-content: space-between; font-weight: 600; }
+.slipcust { font-size: 22px; font-weight: 600; margin: 4px 0 10px; }
+.sline { border-top: 1px solid var(--line); padding: 8px 0; }
+.sline .sub { color: var(--dim); font-size: 15px; display: block; }
+.srow { display: flex; justify-content: space-between; gap: 12px; }
+.srow b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stotal { border-top: 2px solid var(--ink); padding-top: 8px; }
+
+.mark { color: var(--go); font-size: 20px; font-weight: 600; margin-top: 24px; }
+.bigno { font-size: 40px; font-weight: 700; color: var(--go); font-variant-numeric: tabular-nums; margin: 4px 0 14px; }
+.warn { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 8px 12px; font-size: 16px; }
+.bad { color: var(--bad); font-weight: 600; }
+.ok { color: var(--go); font-weight: 600; }
+
+.wrow { display: grid; grid-template-columns: 1fr 112px 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+.wrow .inp { text-align: right; }
+
+.stat { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.stat b { font-variant-numeric: tabular-nums; }
+.statbig { font-size: 30px; font-weight: 700; margin: 4px 0 10px; }
+ul.errs { margin: 6px 0; padding-left: 20px; }
+
+table.rec { width: 100%; border-collapse: collapse; font-size: 15px; background: var(--card); }
+table.rec th, table.rec td { border: 1px solid var(--line); padding: 6px; text-align: left; }
+.linkbtn { background: none; border: 0; padding: 10px 0; color: var(--dim); text-decoration: underline; font-size: 15px; }
+
+/* 題目紙:同一份檔案加 #sheet 就是印給試按的人看的紙,題目只寫一份,兩邊不會對不起來 */
+body.sheet { background: #fff; font-size: 11.5pt; line-height: 1.4; }
+body.sheet .fake { display: none; }
+body.sheet #app { max-width: 182mm; padding: 0; }
+body.sheet h1 { font-size: 17pt; margin: 0 0 2mm; }
+body.sheet h2 { font-size: 12.5pt; margin: 4mm 0 1mm; }
+body.sheet ol { margin: 1mm 0; padding-left: 6mm; }
+body.sheet p { margin: 1.2mm 0; }
+body.sheet table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+body.sheet th, body.sheet td { border: 0.3mm solid #444; padding: 1.5mm; height: 8.5mm; text-align: left; font-weight: 400; }
+body.sheet th { height: auto; font-weight: 600; }
+@page { size: A4; margin: 13mm 14mm; }
+</style>
+</head>
+<body>
+<div class="fake">試按用：客戶、品項、價錢都是假的，也不會真的印單</div>
+<main id="app"></main>
+
+<script>
+/* 全部是假資料。這一頁沒有接任何東西,只是給開單的人試按,量他們開一張單要多久、卡在哪。 */
+
+const TYPES = ["商行", "餐廳", "小吃", "火鍋", "羊肉爐", "市場攤"];
+const STEMS = "甲乙丙丁戊己庚辛壬癸".split("");
+const ITEMS = [
+  { g: "羊", name: "羊肩肉", how: "定重", each: 16, price: 300 },
+  { g: "羊", name: "羊腿肉", how: "定重", each: 20, price: 280 },
+  { g: "羊", name: "羊排", how: "定重", each: 10, price: 350 },
+  { g: "羊", name: "羊腱", how: "定重", each: 12, price: 320 },
+  { g: "羊", name: "羊肉片", how: "定重", each: 12, price: 260 },
+  { g: "羊", name: "帶皮羊肉", how: "實秤", each: "", price: 240 },
+  { g: "牛", name: "牛腱", how: "實秤", each: "", price: 380 },
+  { g: "牛", name: "牛肋條", how: "實秤", each: "", price: 360 },
+  { g: "牛", name: "牛腩", how: "定重", each: 18, price: 300 },
+  { g: "牛", name: "牛肩肉", how: "定重", each: 20, price: 330 },
+  { g: "牛", name: "牛板腱", how: "定重", each: 10, price: 520 },
+  { g: "牛", name: "牛絞肉", how: "定重", each: 10, price: 240 },
+];
+const SPECS = ["不用處理", "切 2 公分", "切片", "切塊", "去骨"];
+const UNITS = ["公斤", "斤", "磅"];
+const KINDS = ["進貨", "退貨", "寄庫", "寄庫出庫", "借貨", "還貨"];
+const DAYS = ["今天", "明天", "後天"];
+
+// 名單做到六十家,才不會比真的少太多、讓選客戶看起來比實際快
+const CUSTOMERS = [];
+STEMS.forEach((s, i) => TYPES.forEach((t, j) => {
+  const n = i * TYPES.length + j + 1;
+  CUSTOMERS.push({
+    code: "T" + String(n).padStart(3, "0"), name: s + t, next: (n * 7) % 90 + 3,
+    prior: Math.round(((n * 1370) % 60000 + 3000) / 10) * 10,
+    often: [n % 12, (n + 4) % 12, (n + 7) % 12],
+  });
+}));
+const SUPPLIERS = ["子肉品廠", "丑肉品廠", "寅貿易", "卯貿易"].map((name, i) => (
+  { code: "S0" + (i + 1), name, next: 11 + i * 5, prior: 0, often: [i, i + 6] }
+));
+// 題目裡有一家不在最近開過裡面,才量得到「要找客戶」的情況
+const RECENT = ["乙餐廳", "丁商行", "甲小吃", "丙羊肉爐", "戊火鍋", "己商行"];
+
+const QUESTIONS = [
+  { title: "第 1 題", note: "全部定重", kind: "出貨", cust: "乙餐廳", date: 0, lines: [
+    { item: "羊肩肉", spec: "切 2 公分", qty: 3, how: "定重", each: 16, unit: "公斤", price: 300 },
+    { item: "羊腿肉", spec: "去骨", qty: 2, how: "定重", each: 18, unit: "公斤", price: 280 },
+  ] },
+  { title: "第 2 題", note: "有要秤的貨", kind: "出貨", cust: "庚火鍋", date: 1, lines: [
+    { item: "牛腱", spec: "不用處理", qty: 5, how: "實秤", unit: "公斤", price: 420, boxes: [16.2, 15.8, 16.4, 15.9, 16.1] },
+    { item: "羊排", spec: "切塊", qty: 2, how: "定重", each: 10, unit: "公斤", price: 350 },
+    { item: "羊肉片", spec: "切片", qty: 4, how: "定重", each: 12, unit: "公斤", price: 260 },
+  ] },
+  { title: "第 3 題", note: "客戶退回來的", kind: "退貨", cust: "丁商行", date: 0, lines: [
+    { item: "羊排", spec: "不用處理", qty: 1, how: "定重", each: 10, unit: "公斤", price: 350 },
+  ] },
+];
+
+const STORE_KEY = "手機開單試按紀錄";
+const STEP_OF = { kind: "選單種", cust: "選貴號", lines: "填品項", item: "填品項", line: "填品項", confirm: "確認" };
+const PARENT = { kind: "start", cust: "kind", lines: "cust", item: "lines", line: "item", confirm: "lines" };
+
+const S = {
+  screen: "start", who: "", q: null, kind: null, cust: null, date: 0, lines: [], draft: null, editing: -1,
+  no: null, t0: 0, stepAt: 0, spent: {}, sentAt: 0, w0: 0, w1: 0, edits: 0,
+};
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n) => Math.round(n).toLocaleString("zh-TW");
+const round2 = (x) => Math.round(x * 100) / 100;
+const hasMoney = (k) => k === "出貨" || k === "退貨" || k === "進貨";
+const hasPrior = (k) => k === "出貨" || k === "退貨";
+const hasWeigh = () => S.lines.some((l) => l.how === "實秤");
+const secs = (ms) => {
+  const s = Math.round(ms / 1000);
+  return s < 60 ? s + " 秒" : Math.floor(s / 60) + " 分 " + (s % 60) + " 秒";
+};
+const dayText = (i) => {
+  const d = new Date(Date.now() + i * 864e5);
+  return (d.getMonth() + 1) + "/" + d.getDate();
+};
+
+function weightOf(l) {  // 這一列的總重量;實秤還沒補完是 null
+  if (l.how === "定重") return round2(l.qty * l.each);
+  if (!l.boxes || l.boxes.filter((x) => x > 0).length < l.qty) return null;
+  return round2(l.boxes.reduce((a, b) => a + b, 0));
+}
+function amountOf(l) {
+  const w = weightOf(l);
+  return w === null ? null : Math.round(w * l.price);
+}
+function total() {
+  let sum = 0, pending = false;
+  S.lines.forEach((l) => {
+    const a = amountOf(l);
+    if (a === null) pending = true; else sum += a;
+  });
+  return { sum, pending };
+}
+function lineSub(l) {
+  const w = weightOf(l);
+  const how = l.how === "定重"
+    ? "定重 每件 " + l.each + " " + l.unit + "，共 " + w + " " + l.unit
+    : (w === null ? "實秤，等倉庫秤" : "實秤 共 " + w + " " + l.unit);
+  return l.qty + " 件｜" + how + (hasMoney(S.kind) ? "｜單價 " + l.price + " 元/" + l.unit : "");
+}
+
+function head(title, sub) {
+  return '<button class="back" data-act="back">‹ 上一步</button><h2>' + title + "</h2>"
+    + (sub ? '<p class="dim">' + sub + "</p>" : "");
+}
+
+/* 比對題目:算錯幾格 */
+function check() {
+  if (S.q === null) return null;
+  const q = QUESTIONS[S.q], errs = [];
+  if (S.kind !== q.kind) errs.push("單種開成 " + S.kind + "，題目是 " + q.kind);
+  if (S.cust.name !== q.cust) errs.push("貴號開成 " + S.cust.name + "，題目是 " + q.cust);
+  if (S.date !== q.date) errs.push("日期開成" + DAYS[S.date] + "，題目是" + DAYS[q.date]);
+  const left = S.lines.slice();
+  const fields = [["spec", "特殊需求"], ["qty", "件數"], ["how", "計價方式"], ["each", "每件重量"], ["unit", "單位"], ["price", "單價"]];
+  q.lines.forEach((want) => {
+    const i = left.findIndex((l) => l.item === want.item);
+    if (i < 0) { errs.push("少了 " + want.item); return; }
+    const got = left.splice(i, 1)[0];
+    fields.forEach(([k, label]) => {
+      if (want[k] !== undefined && got[k] !== want[k]) {
+        errs.push(want.item + " 的" + label + "開成 " + (got[k] || "（空的）") + "，題目是 " + want[k]);
+      }
+    });
+    if (want.boxes) want.boxes.forEach((w, n) => {
+      const g = got.boxes && got.boxes[n];
+      if (g !== w) errs.push(want.item + " 第 " + (n + 1) + " 件重量寫 " + (g || "（空的）") + "，題目是 " + w);
+    });
+  });
+  left.forEach((l) => errs.push("多了 " + l.item));
+  return errs;
+}
+
+/* 試按紀錄:只存在這支手機,沒有傳到任何地方 */
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
+}
+function saveRecord(rec) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(loadRecords().concat([rec]))); } catch (e) { /* 存不了就只顯示在結果頁 */ }
+}
+function recordsHtml() {
+  const recs = loadRecords();
+  if (!recs.length) return "";
+  return '<div class="lab">試按紀錄</div><table class="rec"><tr><th>誰</th><th>題目</th><th>開單</th><th>補重量</th><th>錯</th><th>改</th></tr>'
+    + recs.map((r) => "<tr><td>" + esc(r.who || "") + "</td><td>" + esc(r.title) + "</td><td>" + esc(r.open) + "</td><td>"
+      + esc(r.weigh || "") + "</td><td>" + esc(r.errs) + "</td><td>" + esc(r.edits) + "</td></tr>").join("")
+    + '</table><button class="linkbtn" data-act="clearRecords">清掉紀錄</button>';
+}
+
+/* 畫面 */
+const SCREENS = {
+  start() {
+    const qs = QUESTIONS.map((q, i) => (
+      '<button class="btn" data-act="begin" data-arg="' + i + '">' + q.title + "<small>" + q.note + "</small></button>"
+    )).join("");
+    return "<h1>手機開單試按</h1>"
+      + '<p class="dim">照題目紙開一張單。不用趕，按錯可以回上一步。</p>'
+      + '<label class="lab" for="who">誰在試（可不填）</label>'
+      + '<input id="who" class="inp" autocomplete="off" value="' + esc(S.who) + '">'
+      + '<div class="lab">開哪一題</div><div class="grid2">' + qs
+      + '<button class="btn" data-act="begin" data-arg="free">自由開<small>沒有題目，隨便按</small></button></div>'
+      + recordsHtml();
+  },
+  kind() {
+    return head("這張是什麼單")
+      + '<button class="btn big" data-act="kind" data-arg="出貨">出貨</button><div class="grid2">'
+      + KINDS.map((k) => '<button class="btn" data-act="kind" data-arg="' + k + '">' + k + "</button>").join("") + "</div>";
+  },
+  cust() {
+    return head(S.kind === "進貨" ? "跟哪一家進貨" : "貴號（哪一家）")
+      + '<input id="q" class="inp" placeholder="打一個字找，例如 乙" autocomplete="off">'
+      + '<div id="custList">' + custList("") + "</div>";
+  },
+  lines() {
+    const t = total();
+    const days = DAYS.map((d, i) => (
+      '<button class="chip' + (S.date === i ? " on" : "") + '" data-act="date" data-arg="' + i + '">' + d + " " + dayText(i) + "</button>"
+    )).join("");
+    const cards = S.lines.map((l, i) => {
+      const a = amountOf(l);
+      return '<button class="card" data-act="editLine" data-arg="' + i + '"><b>' + esc(l.item) + "・" + esc(l.spec) + "</b>"
+        + '<span class="sub">' + lineSub(l) + "</span>"
+        + (hasMoney(S.kind) ? '<span class="amt">' + (a === null ? "秤完才有金額" : money(a)) + "</span>" : "") + "</button>";
+    }).join("");
+    return head(esc(S.kind) + "：" + esc(S.cust.name))
+      + '<div class="lab">送貨日期</div><div class="chips">' + days + "</div>"
+      + '<div class="lab">品項</div>' + (cards || '<p class="dim">還沒有品項</p>')
+      + '<button class="btn add" data-act="addLine">＋ 加品項</button>'
+      + (S.lines.length > 6 ? '<p class="warn">超過 6 列，真的印的時候會接第二張。</p>' : "")
+      + '<div class="bar"><div class="barin">'
+      + (hasMoney(S.kind) ? '<div class="sum"><span>本單總額' + (t.pending ? "（還沒算要秤的貨）" : "") + "</span><b>" + money(t.sum) + "</b></div>" : "")
+      + '<button class="btn go" data-act="toConfirm"' + (S.lines.length ? "" : " disabled") + ">下一步</button></div></div>";
+  },
+  item() {
+    const btn = (it) => (
+      '<button class="btn" data-act="pickItem" data-arg="' + it.name + '">' + it.name
+      + (hasMoney(S.kind) ? "<small>" + it.price + " 元/公斤</small>" : "") + "</button>"
+    );
+    const group = (g) => '<div class="lab">' + g + '</div><div class="grid2">' + ITEMS.filter((i) => i.g === g).map(btn).join("") + "</div>";
+    return head("選品項")
+      + '<div class="lab">這家常買</div><div class="grid2">' + S.cust.often.map((i) => btn(ITEMS[i])).join("") + "</div>"
+      + group("羊") + group("牛");
+  },
+  line() {
+    const d = S.draft;
+    const chip = (act, v, on) => '<button class="chip' + (on ? " on" : "") + '" data-act="' + act + '" data-arg="' + v + '">' + v + "</button>";
+    return head(esc(d.item))
+      + '<div class="lab">特殊需求</div><div class="chips">' + SPECS.concat(["其他"]).map((s) => chip("spec", s, d.spec === s)).join("") + "</div>"
+      + '<input id="other" class="inp" style="margin-top:8px" placeholder="寫客戶要的處理方式" autocomplete="off" value="' + esc(d.other) + '"' + (d.spec === "其他" ? "" : " hidden") + ">"
+      + '<div class="lab">件數</div><div class="stepper"><button data-act="qty" data-arg="-1" aria-label="少一件">－</button>'
+      + '<input id="qty" class="inp num" inputmode="numeric" aria-label="件數" value="' + esc(d.qty) + '">'
+      + '<button data-act="qty" data-arg="1" aria-label="多一件">＋</button></div>'
+      + '<div class="lab">計價方式</div><div class="grid2">'
+      + '<button class="btn' + (d.how === "定重" ? " on" : "") + '" data-act="how" data-arg="定重">定重<small>每件重量固定</small></button>'
+      + '<button class="btn' + (d.how === "實秤" ? " on" : "") + '" data-act="how" data-arg="實秤">實秤<small>每箱秤過才知道</small></button></div>'
+      + '<div class="inline"><span class="lab">單位</span><div class="chips">' + UNITS.map((u) => chip("unit", u, d.unit === u)).join("") + "</div></div>"
+      + '<div class="grid2">'  // 每件重量和單價排同一列,單價才不會被擠到畫面外、沒看到就送出
+      + '<div' + (d.how === "定重" ? "" : " hidden") + '><label class="lab" for="each">每件幾' + d.unit + "</label>"
+      + '<input id="each" class="inp num" inputmode="decimal" value="' + esc(d.each) + '"></div>'
+      + '<div' + (hasMoney(S.kind) ? "" : " hidden") + '><label class="lab" for="price">單價（元/' + d.unit + "）</label>"
+      + '<input id="price" class="inp num" inputmode="decimal" value="' + esc(d.price) + '"></div></div>'
+      + (S.editing >= 0 ? '<button class="btn del" data-act="delLine">刪掉這一列</button>' : "")
+      + '<div class="bar"><div class="barin"><div class="sum" id="amt"></div>'
+      + '<button class="btn go" id="saveLine" data-act="saveLine">' + (S.editing >= 0 ? "改好了" : "加進單子") + "</button></div></div>";
+  },
+  confirm() {
+    const t = total(), c = S.cust, sign = S.kind === "退貨" ? -1 : 1;
+    const rows = S.lines.map((l) => {
+      const a = amountOf(l);
+      return '<div class="sline"><div class="srow"><span>' + esc(l.item) + "・" + esc(l.spec) + "</span>"
+        + (hasMoney(S.kind) ? "<b>" + (a === null ? "秤完才有" : money(a)) + "</b>" : "") + "</div>"
+        + '<span class="sub">' + lineSub(l) + "</span></div>";
+    }).join("");
+    let foot = "";
+    if (hasMoney(S.kind)) foot += '<div class="srow stotal"><span>本單總額</span><b>' + money(t.sum) + (t.pending ? "＋要秤的貨" : "") + "</b></div>";
+    if (hasPrior(S.kind)) {
+      foot += '<div class="srow"><span>前期貨款（截至昨天）</span><b>' + money(c.prior) + "</b></div>"
+        + '<div class="srow"><span>累計應付貨款</span><b>' + (t.pending ? "秤完才有" : money(c.prior + sign * t.sum)) + "</b></div>";
+    }
+    if (!hasMoney(S.kind)) foot += '<p class="warn">這種單不印金額，會印寄存或借貨的餘量。</p>';
+    return head("確認這張單", "前期貨款和累計是系統帶的，不用自己算。")
+      + '<div class="slip"><div class="sliphead"><span>' + esc(S.kind) + "</span><span>" + DAYS[S.date] + " " + dayText(S.date) + "</span></div>"
+      + '<div class="slipcust">' + esc(c.name) + "</div>" + rows + foot + "</div>"
+      + '<div class="bar"><div class="barin"><button class="btn go" data-act="send">送出</button></div></div>';
+  },
+  done() {
+    return '<div class="mark">已送出，單號</div><div class="bigno">' + S.no + "</div>"
+      + (hasWeigh()
+        ? '<p>這張有要秤的貨，單號先給了。倉庫秤完補上重量才會印。</p><button class="btn go" data-act="toWeigh">換倉庫的人：補重量</button>'
+        : '<p>已送到倉庫的印表機。（試按不會真的印）</p><button class="btn go" data-act="toResult">看結果</button>');
+  },
+  weigh() {
+    const all = S.lines.reduce((a, l) => a + (l.how === "實秤" ? l.qty : 0), 0);
+    let n = 0;
+    const rows = S.lines.map((l, i) => {
+      if (l.how !== "實秤") return "";
+      const boxes = Array.from({ length: l.qty }, (_, k) => {
+        n += 1;
+        const v = l.boxes && l.boxes[k] ? l.boxes[k] : "";
+        return '<label class="wrow"><span>第 ' + n + " 件／共 " + all + ' 件</span><input class="inp num w" data-l="' + i + '" data-k="' + k
+          + '" inputmode="decimal" enterkeyhint="next" value="' + v + '"><span>' + l.unit + "</span></label>";
+      }).join("");
+      return '<div class="lab">' + esc(l.item) + "・" + esc(l.spec) + "</div>" + boxes;
+    }).join("");
+    return '<h2>補重量</h2><p class="dim">單號 ' + S.no + "。照秤上的數字填，含箱。</p>" + rows
+      + '<div class="bar"><div class="barin"><button class="btn go" id="doneWeigh" data-act="doneWeigh" disabled>補好了，送去印</button></div></div>';
+  },
+  result() {
+    const errs = check();
+    const steps = Object.keys(S.spent);
+    const worst = steps.reduce((a, k) => (a === null || S.spent[k] > S.spent[a] ? k : a), null);
+    const rows = steps.map((k) => (
+      '<div class="stat"><span>' + k + (k === worst ? "（最久）" : "") + "</span><b>" + secs(S.spent[k]) + "</b></div>"
+    )).join("");
+    let verdict = "";
+    if (errs !== null) {
+      verdict = errs.length
+        ? '<p class="bad">錯 ' + errs.length + ' 格</p><ul class="errs">' + errs.map((e) => "<li>" + esc(e) + "</li>").join("") + "</ul>"
+        : '<p class="ok">跟題目完全一樣</p>';
+    }
+    return '<h2>結果</h2><div class="dim">開這張單花了</div><div class="statbig">' + secs(S.sentAt - S.t0) + "</div>" + rows
+      + (S.w1 ? '<div class="stat"><span>倉庫補重量</span><b>' + secs(S.w1 - S.w0) + "</b></div>" : "")
+      + '<div class="stat"><span>回上一步或改單</span><b>' + S.edits + " 次</b></div>" + verdict
+      + '<div style="height:16px"></div><button class="btn go" data-act="again">再開一張</button>';
+  },
+};
+
+function custList(q) {
+  const pool = S.kind === "進貨" ? SUPPLIERS : CUSTOMERS;
+  const rows = (list) => list.map((c) => (
+    '<button class="row" data-act="cust" data-arg="' + c.code + '"><b>' + esc(c.name) + '</b><span class="dim small">' + c.code + "</span></button>"
+  )).join("");
+  if (q) {
+    const hit = pool.filter((c) => c.name.includes(q));
+    return hit.length ? '<div class="lab">找到 ' + hit.length + " 家</div>" + rows(hit) : '<p class="dim">找不到這一家</p>';
+  }
+  const recent = S.kind === "進貨" ? [] : RECENT.map((n) => pool.find((c) => c.name === n));
+  return (recent.length ? '<div class="lab">最近開過</div>' + rows(recent) : "") + '<div class="lab">全部</div>' + rows(pool);
+}
+
+/* 畫面畫完才接得上的輸入框 */
+const AFTER = {
+  start() { $("#who").addEventListener("input", (e) => { S.who = e.target.value; }); },
+  cust() { $("#q").addEventListener("input", (e) => { $("#custList").innerHTML = custList(e.target.value.trim()); }); },
+  line() {
+    [["#qty", "qty"], ["#each", "each"], ["#price", "price"], ["#other", "other"]].forEach(([sel, key]) => {
+      $(sel).addEventListener("input", (e) => { S.draft[key] = e.target.value; refreshLine(); });
+    });
+    refreshLine();
+  },
+  weigh() {
+    const inputs = Array.from(document.querySelectorAll(".w"));
+    const refresh = () => { $("#doneWeigh").disabled = !inputs.every((i) => parseFloat(i.value) > 0); };
+    inputs.forEach((inp, n) => {
+      inp.addEventListener("input", () => {
+        const l = S.lines[+inp.dataset.l];
+        l.boxes = l.boxes || [];
+        l.boxes[+inp.dataset.k] = parseFloat(inp.value) || 0;
+        refresh();
+      });
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && inputs[n + 1]) { e.preventDefault(); inputs[n + 1].focus(); }
+      });
+    });
+    refresh();
+  },
+};
+
+function refreshLine() {
+  const d = S.draft, qty = +d.qty, each = +d.each, price = +d.price, money_ = hasMoney(S.kind);
+  const ok = qty > 0 && (d.how === "實秤" || each > 0) && (!money_ || price > 0) && (d.spec !== "其他" || d.other.trim());
+  $("#saveLine").disabled = !ok;
+  let text = "";
+  if (d.how === "實秤") text = money_ ? "<span>金額等倉庫秤完才有</span>" : "";
+  else if (qty > 0 && each > 0) {
+    const w = round2(qty * each);
+    text = "<span>共 " + w + " " + d.unit + "</span>" + (money_ ? "<b>" + money(w * price) + "</b>" : "");
+  }
+  $("#amt").innerHTML = text;
+}
+
+function tick() {
+  const now = Date.now(), name = STEP_OF[S.screen];
+  if (name && S.t0) S.spent[name] = (S.spent[name] || 0) + (now - S.stepAt);
+  S.stepAt = now;
+}
+function go(next) {
+  tick();
+  S.screen = next;
+  render();
+  window.scrollTo(0, 0);
+}
+function render() {
+  $("#app").innerHTML = SCREENS[S.screen]();
+  if (AFTER[S.screen]) AFTER[S.screen]();
+}
+function finish() {
+  const errs = check();
+  saveRecord({
+    who: S.who, title: S.q === null ? "自由開" : QUESTIONS[S.q].title, open: secs(S.sentAt - S.t0),
+    weigh: S.w1 ? secs(S.w1 - S.w0) : "", errs: errs === null ? "" : errs.length, edits: S.edits,
+  });
+  go("result");
+}
+
+const ACT = {
+  begin(arg) {
+    Object.assign(S, {
+      q: arg === "free" ? null : +arg, kind: null, cust: null, date: 0, lines: [], draft: null, editing: -1,
+      no: null, spent: {}, sentAt: 0, w0: 0, w1: 0, edits: 0, t0: Date.now(), stepAt: Date.now(),
+    });
+    go("kind");
+  },
+  back() {
+    const to = S.screen === "line" && S.editing >= 0 ? "lines" : PARENT[S.screen];
+    if (!to) return;  // 送出之後就回不去了
+    if (to !== "start") S.edits += 1;
+    go(to);
+  },
+  kind(arg) { S.kind = arg; go("cust"); },
+  cust(arg) { S.cust = (S.kind === "進貨" ? SUPPLIERS : CUSTOMERS).find((c) => c.code === arg); go("lines"); },
+  date(arg) { S.date = +arg; render(); },
+  addLine() { S.editing = -1; go("item"); },
+  pickItem(arg) {
+    const it = ITEMS.find((i) => i.name === arg);
+    S.draft = { item: it.name, spec: SPECS[0], other: "", qty: 1, how: it.how, each: it.each, unit: "公斤", price: it.price };
+    go("line");
+  },
+  editLine(arg) {
+    const i = +arg, l = S.lines[i], known = SPECS.includes(l.spec);
+    S.editing = i;
+    S.edits += 1;
+    S.draft = Object.assign({}, l, { spec: known ? l.spec : "其他", other: known ? "" : l.spec, each: l.how === "定重" ? l.each : "" });
+    go("line");
+  },
+  spec(arg) { S.draft.spec = arg; render(); },
+  how(arg) { S.draft.how = arg; render(); },
+  unit(arg) { S.draft.unit = arg; render(); },
+  qty(arg) {
+    S.draft.qty = Math.max(1, (parseInt(S.draft.qty, 10) || 0) + +arg);
+    $("#qty").value = S.draft.qty;
+    refreshLine();
+  },
+  saveLine() {
+    const d = S.draft;
+    const line = {
+      item: d.item, spec: d.spec === "其他" ? d.other.trim() : d.spec, qty: +d.qty, how: d.how,
+      each: d.how === "定重" ? +d.each : undefined, unit: d.unit, price: +d.price,
+    };
+    if (S.editing >= 0) S.lines[S.editing] = line; else S.lines.push(line);
+    S.editing = -1;
+    go("lines");
+  },
+  delLine() { S.lines.splice(S.editing, 1); S.editing = -1; go("lines"); },
+  toConfirm() { go("confirm"); },
+  send() {
+    const c = S.cust;
+    S.no = c.code + "-" + String(c.next).padStart(4, "0");
+    c.next += 1;
+    S.sentAt = Date.now();
+    go("done");
+  },
+  toWeigh() { S.w0 = Date.now(); go("weigh"); },
+  doneWeigh() { S.w1 = Date.now(); finish(); },
+  toResult() { finish(); },
+  again() { S.t0 = 0; go("start"); },
+  clearRecords() {
+    if (!confirm("清掉這支手機上的試按紀錄？")) return;
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* 本來就存不了 */ }
+    render();
+  },
+};
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]");
+  if (b && !b.disabled) ACT[b.dataset.act](b.dataset.arg);
+});
+
+/* 題目紙 */
+function renderSheet() {
+  document.body.classList.add("sheet");
+  document.title = "手機開單試按：題目紙";
+  const lineText = (l) => {
+    const how = l.how === "定重" ? "定重，每件 " + l.each + " " + l.unit : "實秤";
+    return esc(l.item) + "，" + esc(l.spec) + "，" + l.qty + " 件，" + how + "，單價 " + l.price + " 元/" + l.unit;
+  };
+  const blocks = QUESTIONS.map((q) => {
+    const weigh = q.lines.filter((l) => l.boxes).map((l) => (
+      "<p>倉庫秤出來（" + esc(l.item) + "，含箱）：" + l.boxes.join("、") + " 公斤</p>"
+    )).join("");
+    return "<h2>" + q.title + "：" + q.kind + "（" + q.note + "）</h2><p>貴號：" + q.cust + "　送貨：" + DAYS[q.date] + "</p><ol>"
+      + q.lines.map((l) => "<li>" + lineText(l) + "</li>").join("") + "</ol>" + weigh;
+  }).join("");
+  const blank = "<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>".repeat(7);
+  $("#app").innerHTML = "<h1>手機開單試按：題目紙</h1>"
+    + "<p>客戶、品項、價錢都是假的。同一題用三種方式各開一次：手寫、廠商的手機 App、我們的手機頁。</p>"
+    + "<p><b>試之前不要教。</b>手寫和廠商 App 用手機碼表記時間，我們的手機頁自己會算。"
+    + "每個人先用的方式要輪流換，不然最後用的那一種會因為題目看熟了而比較快。</p>"
+    + blocks
+    + "<h2>記錄</h2><table><tr><th style=\"width:15%\">誰</th><th style=\"width:9%\">題目</th><th style=\"width:13%\">手寫</th>"
+    + "<th style=\"width:13%\">廠商 App</th><th style=\"width:13%\">手機頁</th><th>卡在哪、錯幾格</th></tr>" + blank + "</table>";
+}
+
+if (location.hash === "#sheet") {
+  renderSheet();
+} else {
+  // 實體返回鍵當「上一步」,不要一按就離開這一頁、整張單不見
+  history.replaceState({ guard: 0 }, "");
+  history.pushState({ guard: 1 }, "");
+  window.addEventListener("popstate", () => {
+    history.pushState({ guard: 1 }, "");
+    ACT.back();
+  });
+  render();
+}
+</script>
+</body>
+</html>
