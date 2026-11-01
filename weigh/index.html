@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>實秤計數器試按</title>
+<style>
+:root {
+  --bg: #eef3f8;
+  --surface: #ffffff;
+  --surface-2: #f4f7fb;
+  --ink: #10233f;
+  --ink-2: #3c4f68;
+  --ink-3: #5a6c84;
+  --line: #d8e1ec;
+  --brand: #0b2545;             /* 冷鏈藍:使用者 9/25 選定的模板 */
+  --brand-strong: #071a33;
+  --brand-soft: #e4eef8;
+  --ice: #a9c7e8;
+  --amber: #d98e04;
+  --side: #0b2545;
+  --side-ink: #b9cbe0;
+  --no: #bf1e2e;                /* 單號的紅字,跟紙本一樣 */
+  --good: #0b5e43;
+  --good-soft: #dcf2e8;
+  --warn: #7a5200;
+  --warn-soft: #fdf0d5;
+  --bad: #a4231b;
+  --bad-soft: #fde8e6;
+  --info: #1c4f8f;
+  --info-soft: #e3eefb;
+  --series: #0c80a8;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(11, 37, 69, .06), 0 6px 20px rgba(11, 37, 69, .05);
+}
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html { -webkit-text-size-adjust: 100% }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Heiti TC", system-ui, sans-serif;
+}
+a { color: inherit; text-decoration: none }
+h1, h2, h3, p { margin: 0 }
+button, input, select, textarea { font: inherit; color: inherit }
+button { cursor: pointer }
+.num { font-variant-numeric: tabular-nums }
+:focus-visible { outline: 2px solid var(--series); outline-offset: 2px }
+svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+
+/* ---------- 外框 ---------- */
+#app { min-height: 100dvh }
+#side { display: none }
+#main { min-width: 0 }
+#top {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 8px;
+  height: 54px; padding: 0 12px 0 16px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+#top h1 { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.demo-tag { flex: none; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn) }
+.me {
+  flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 10px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; color: var(--ink-2);
+}
+.icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; margin-left: -8px; border: 0; background: none; border-radius: 10px; color: var(--ink) }
+.icon-btn:hover { background: var(--surface-2) }
+#view { max-width: 1200px; margin: 0 auto; padding: 16px 16px 104px }
+#tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex;
+  padding-bottom: env(safe-area-inset-bottom); background: var(--surface); border-top: 1px solid var(--line);
+}
+#tabs a {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-height: 58px; font-size: 12px; color: var(--ink-3);
+}
+#tabs a.on { color: var(--brand); font-weight: 700 }
+#tabs a.plus svg.i { width: 40px; height: 32px; padding: 6px 10px; border-radius: 10px; background: var(--brand); color: #fff; stroke-width: 2.4 }
+body.focus #tabs { display: none }
+body.focus #view { padding-bottom: 120px }
+
+.side-brand { padding: 20px 18px 16px; color: #fff; font-weight: 700; font-size: 16px; letter-spacing: .02em }
+.side-brand small { display: block; margin-top: 2px; font-weight: 400; font-size: 12px; color: var(--side-ink) }
+.side-new {
+  display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 14px 12px; min-height: 42px;
+  background: #fff; color: var(--brand-strong); font-weight: 700; border-radius: 10px;
+}
+.side-new:hover { background: var(--brand-soft) }
+.side-nav a {
+  display: flex; align-items: center; gap: 10px; min-height: 42px; margin: 2px 8px; padding: 0 12px;
+  color: var(--side-ink); border-radius: 8px;
+}
+.side-nav a:hover { background: rgba(255, 255, 255, .07); color: #fff }
+.side-nav a.on { background: rgba(255, 255, 255, .13); color: #fff; font-weight: 700 }
+
+/* ---------- 共用元件 ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px }
+.card + .card { margin-top: 12px }
+.stack { min-width: 0 }
+.stack > * + * { margin-top: 12px }
+.card-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 14px; font-weight: 700; color: var(--ink-2) }
+.card-title a { font-weight: 400; color: var(--brand); font-size: 13px }
+.muted { color: var(--ink-3) }
+.small { font-size: 13px }
+.right { text-align: right }
+.spread { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.wrap { display: flex; flex-wrap: wrap; gap: 8px }
+.hr { height: 1px; margin: 10px 0; background: var(--line) }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-weight: 600; color: var(--ink); white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2) }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff }
+.btn.primary:hover { background: var(--brand-strong) }
+.btn.danger { color: var(--bad); border-color: #eec3bf }
+.btn.danger:hover { background: var(--bad-soft) }
+.btn.block { width: 100% }
+.btn.big { min-height: 52px; font-size: 16px }
+.btn:disabled { opacity: .5; cursor: default }
+
+.input, select.input, textarea.input {
+  width: 100%; min-height: 46px; padding: 9px 12px; border: 1px solid #b7c4ca; border-radius: 10px;
+  background: var(--surface); font-size: 16px;
+}
+.input:focus { outline: 2px solid var(--series); outline-offset: 0; border-color: var(--series) }
+.field { display: block }
+.field > span { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; color: var(--ink-2) }
+.field + .field { margin-top: 12px }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+.cols > .field + .field { margin-top: 0 }
+.field-row { margin-top: 12px }
+
+.seg { display: flex; padding: 3px; border-radius: 10px; background: #e3e9eb }
+.seg button, .seg a {
+  flex: 1; min-height: 40px; padding: 0 12px; border: 0; border-radius: 8px; background: none;
+  font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+}
+.seg .on { background: var(--surface); color: var(--brand-strong); box-shadow: 0 1px 2px rgba(18, 34, 42, .14) }
+.seg[role="tablist"] { flex-wrap: wrap }       /* 手機放不下就換行,不要藏到畫面外面 */
+.seg[role="tablist"] a { flex: 1 0 auto }
+textarea.input { height: auto; padding: 8px 12px; line-height: 1.5 }
+
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px }
+.chips::-webkit-scrollbar { display: none }
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 14px;
+  border: 1px solid #b7c4ca; border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 14px; white-space: nowrap;
+}
+.chip.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600 }
+.chip .c { font-size: 12px; opacity: .85 }
+
+.tag { display: inline-block; padding: 0 8px; border-radius: 6px; font-size: 12.5px; font-weight: 600; line-height: 22px; white-space: nowrap }
+.k-出貨 { background: #e1eff3; color: #0a4a5a }
+.k-退貨 { background: #fbe9e4; color: #8f2f14 }
+.k-進貨, .k-進貨退出 { background: #e6f1e4; color: #2c5f22 }
+.k-更正 { background: #fbe9e4; color: #8f2f14 }
+.k-寄庫, .k-寄庫出庫 { background: #efe9f7; color: #553a8a }
+.k-借貨, .k-還貨 { background: var(--warn-soft); color: var(--warn) }
+.s-已開 { background: #e9eef0; color: #3a4a52 }
+.s-司機已回報 { background: var(--info-soft); color: var(--info) }
+.s-財務已核對 { background: var(--good-soft); color: var(--good) }
+.s-作廢 { background: #eeeeee; color: #676767; text-decoration: line-through }
+.s-待補重量 { background: var(--warn-soft); color: var(--warn) }
+.s-待確認 { background: var(--bad-soft); color: var(--bad) }
+.s-倉庫已點收 { background: var(--info-soft); color: var(--info) }
+
+.empty { padding: 28px 12px; text-align: center; color: var(--ink-3) }
+.note { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); color: var(--ink-2); font-size: 14px }
+.note.good { background: var(--good-soft); color: var(--good) }
+.note.warn { background: var(--warn-soft); color: var(--warn) }
+.note.bad { background: var(--bad-soft); color: var(--bad) }
+
+/* ---------- 首頁 ---------- */
+.hello { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px }
+.hello h2 { font-size: 20px }
+.tasks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.task {
+  display: flex; flex-direction: column; min-height: 104px; padding: 12px 14px; background: var(--surface);
+  border: 1px solid var(--line); border-left: 4px solid var(--ice); border-radius: var(--radius);
+}
+.task:hover { border-color: var(--brand) }
+.task b { font-size: 14px; color: var(--ink-2) }
+.task .count { margin-top: 2px; font-size: 32px; line-height: 1.15; font-weight: 700 }
+.task .count small { margin-left: 2px; font-size: 14px; font-weight: 400; color: var(--ink-3) }
+.task .hint { margin-top: auto; font-size: 12.5px; color: var(--ink-3) }
+.task.alert { border-color: #edc98a; border-left-color: var(--amber); background: #fffaf0 }
+.task.alert .count { color: var(--warn) }
+.task.zero { border-left-color: var(--line) }
+.task.zero .count { color: var(--ink-3) }
+.kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px }
+.kinds a, .kinds button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 58px; padding: 6px 2px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-weight: 700; font-size: 15px;
+}
+.kinds a:hover, .kinds button:hover { border-color: var(--brand) }
+.kinds .on { background: var(--brand); border-color: var(--brand); color: #fff }
+.kinds small { font-weight: 400; font-size: 11.5px; color: var(--ink-3) }
+.kinds .on small { color: #cfe3e9 }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.tile { padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0 }
+.tile .label { font-size: 13px; color: var(--ink-3) }
+.tile .value { font-size: 20px; font-weight: 700; line-height: 1.3; white-space: nowrap }
+.tile .sub { font-size: 12px; color: var(--ink-3) }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px }
+
+.chart { width: 100%; height: 190px }
+.chart svg { display: block; width: 100%; height: 100% }
+.chart .base { stroke: var(--line) }
+.chart .col path { fill: var(--series) }
+.chart .col .hit { fill: transparent }
+.chart .col:hover path, .chart .col:focus path { fill: var(--brand) }
+.chart .col:focus { outline: none }
+.chart text { font-size: 11px; fill: var(--ink-3); font-family: inherit }
+.chart text.val { fill: var(--ink-2); font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 3px }
+#tip {
+  position: fixed; z-index: 90; padding: 6px 10px; border-radius: 8px; background: var(--ink); color: #fff;
+  font-size: 13px; pointer-events: none; white-space: nowrap;
+}
+details.table-view { margin-top: 8px; font-size: 13px; color: var(--ink-3) }
+details.table-view summary { cursor: pointer; min-height: 28px }
+.mini { width: 100%; border-collapse: collapse; font-size: 13px }
+.mini th, .mini td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: left }
+.mini td.r, .mini th.r { text-align: right }
+
+/* ---------- 單據列表 ---------- */
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden }
+.row {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "main amt" "meta status"; gap: 2px 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line); align-items: center;
+}
+.row:last-child { border-bottom: 0 }
+a.row:hover { background: var(--surface-2) }
+.row-main { grid-area: main; display: flex; align-items: center; gap: 8px; min-width: 0 }
+.row-main .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.row-meta { grid-area: meta; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.row-amt { grid-area: amt; text-align: right; font-weight: 700 }
+.row-amt.pending { font-weight: 400; color: var(--warn); font-size: 13px }
+.row-status { grid-area: status; text-align: right }
+.no { color: var(--no); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .01em; white-space: nowrap }
+.day-head { padding: 6px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 600; color: var(--ink-3) }
+.filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px }
+.filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.search { position: relative }
+.search svg.i { position: absolute; left: 12px; top: 13px; color: var(--ink-3) }
+.search .input { padding-left: 40px }
+
+/* ---------- 單據明細 ---------- */
+.doc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px }
+.doc-head .no { font-size: 24px; line-height: 1.2 }
+.doc-head .party { margin-top: 4px; font-size: 16px; font-weight: 600 }
+.doc-total { text-align: right; flex: none }
+.doc-total b { display: block; font-size: 24px; line-height: 1.2 }
+.doc-lines { margin: 0; padding: 0; list-style: none }
+.doc-lines li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line) }
+.doc-lines li:last-child { border-bottom: 0 }
+.doc-lines .what { font-weight: 600 }
+.doc-lines .how { font-size: 13px; color: var(--ink-3) }
+.doc-lines .amt { flex: none; text-align: right; font-weight: 700 }
+.boxes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px }
+.boxes span { padding: 0 6px; border-radius: 5px; background: var(--surface-2); font-size: 12px; color: var(--ink-2) }
+.actions { display: flex; flex-wrap: wrap; gap: 8px }
+.actions .btn { flex: 1 1 140px }
+.timeline { margin: 0; padding: 0; list-style: none; font-size: 13.5px }
+.timeline li { position: relative; padding: 0 0 12px 18px; border-left: 2px solid var(--line); margin-left: 5px }
+.timeline li:last-child { border-left-color: transparent; padding-bottom: 0 }
+.timeline li::before { content: ""; position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--brand) }
+.timeline small { display: block; color: var(--ink-3) }
+.doc-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px }
+.slip-fit { overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff }
+.slip-fit > .sl { transform-origin: top left }
+
+/* ---------- 開單 ---------- */
+.compose { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px }
+.compose-side { display: none }
+.picked { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.picked .name { font-size: 17px; font-weight: 700 }
+.money-line { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 14px }
+.money-line b { font-variant-numeric: tabular-nums }
+.results { margin-top: 8px; max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px }
+.results button {
+  display: flex; width: 100%; justify-content: space-between; gap: 8px; min-height: 46px; padding: 8px 12px;
+  border: 0; border-bottom: 1px solid var(--line); background: var(--surface); text-align: left;
+}
+.results button:last-child { border-bottom: 0 }
+.results button:hover { background: var(--surface-2) }
+.draft-line {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 0; border: 0; border-bottom: 1px solid var(--line);
+  background: none; text-align: left;
+}
+.draft-line .grow { flex: 1; min-width: 0 }
+.draft-line .what { font-weight: 600 }
+.draft-line .how { font-size: 13px; color: var(--ink-3) }
+.draft-line .amt { flex: none; text-align: right; font-weight: 700 }
+.add-line {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 50px; margin-top: 10px;
+  border: 1.5px dashed #9fb0b7; border-radius: 10px; background: none; font-weight: 700; color: var(--brand);
+}
+.add-line:hover { background: var(--brand-soft) }
+.actionbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 20px rgba(18, 34, 42, .07);
+}
+.actionbar .sum { flex: 1; min-width: 0 }
+.actionbar .sum small { display: block; font-size: 12px; color: var(--ink-3) }
+.actionbar .sum b { font-size: 22px; line-height: 1.2 }
+.actionbar .btn { flex: none; min-width: 132px }
+.actionbar.compact { gap: 8px }
+.actionbar.compact .sum b { font-size: 18px; white-space: nowrap }
+.actionbar.compact .btn { min-width: 0; padding-inline: 16px }
+.stepper { display: flex; align-items: stretch; gap: 0 }
+.stepper button { width: 54px; border: 1px solid #b7c4ca; background: var(--surface-2); font-size: 22px; font-weight: 700 }
+.stepper button:first-child { border-radius: 10px 0 0 10px }
+.stepper button:last-child { border-radius: 0 10px 10px 0 }
+.stepper .input { border-radius: 0; border-left: 0; border-right: 0; text-align: center; font-weight: 700; font-size: 20px }
+.sub-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line) }
+.sub-total b { font-size: 20px }
+.box-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.box-grid label { display: block; font-size: 13px; color: var(--ink-3) }
+.box-grid label span { display: block; margin-bottom: 2px }
+.box-grid .input { font-size: 20px; font-weight: 700; text-align: center }
+.weigher { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2) }
+.weigher-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 8px; margin-bottom: 8px }
+.weigher-head b { flex: none }
+.weigher-head span { font-weight: 700; white-space: nowrap }
+.weigher-entry { display: flex; gap: 8px }
+.weigher-entry .input { flex: 1; min-width: 0; font-size: 20px; font-weight: 700; text-align: center; background: var(--surface) }
+.weigher-entry .btn { flex: none; min-width: 92px }
+.weigher-note { min-height: 20px; margin: 6px 0; font-size: 13px; color: var(--ink-3) }
+.weigher-note.bad { color: var(--bad); font-weight: 600 }
+.weigher-note button { padding: 0 4px; border: 0; background: none; color: var(--info); font-weight: 700; text-decoration: underline }
+.weigher-rows { max-height: 264px; overflow-y: auto }
+.box-cell-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink-3) }
+.box-cell-head button { width: 34px; height: 28px; border: 0; background: none; color: var(--ink-3); font-size: 18px; line-height: 1 }
+.box-cell .input { width: 100%; background: var(--surface) }
+.toggle { display: flex; align-items: center; justify-content: space-between; min-height: 48px; font-weight: 600 }
+.toggle input { width: 24px; height: 24px; accent-color: var(--brand) }
+
+/* ---------- 庫存、帳款、報表 ---------- */
+.stock-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 14px; border-bottom: 1px solid var(--line) }
+.stock-row:last-child { border-bottom: 0 }
+.stock-row:hover { background: var(--surface-2) }
+.stock-row .name { font-weight: 600 }
+.stock-row .qty { text-align: right; font-weight: 700 }
+.stock-row .sub { font-size: 12.5px; color: var(--ink-3) }
+.bars { display: grid; gap: 8px }
+.bar-row { display: grid; grid-template-columns: 7em 1fr auto; align-items: center; gap: 8px; font-size: 14px }
+.bar-row .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.bar-track { height: 14px }
+.bar-fill { display: block; height: 14px; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--series) }
+.bar-row .v { font-weight: 600; font-variant-numeric: tabular-nums }
+.report-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px }
+.audit-row { padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 14px }
+.audit-row:last-child { border-bottom: 0 }
+.audit-row small { display: block; color: var(--ink-3) }
+.menu-list a { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 14px; border-bottom: 1px solid var(--line); font-weight: 600 }
+.menu-list a:last-child { border-bottom: 0 }
+.person { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 54px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface) }
+.person + .person { margin-top: 8px }
+.person.on { border-color: var(--brand); background: var(--brand-soft); font-weight: 700 }
+
+/* ---------- 底部抽屜 ---------- */
+.sheet-back { position: fixed; inset: 0; z-index: 60; background: rgba(12, 28, 35, .45) }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 61; display: flex; flex-direction: column; max-height: 92dvh;
+  background: var(--surface); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 40px rgba(12, 28, 35, .25);
+}
+.sheet-head { display: flex; align-items: center; gap: 8px; padding: 12px 8px 8px 16px; border-bottom: 1px solid var(--line) }
+.sheet-head h2 { flex: 1; font-size: 17px; min-width: 0 }
+.sheet-head .icon-btn { margin: 0 }
+.sheet-body { flex: 1; overflow-y: auto; padding: 14px 16px; overscroll-behavior: contain }
+.sheet-foot { padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line) }
+#toast {
+  position: fixed; left: 50%; bottom: 84px; z-index: 80; transform: translateX(-50%); max-width: min(92vw, 460px);
+  padding: 10px 16px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+#toast.show { opacity: 1 }
+#toast.bad { background: var(--bad) }
+#toast.good { background: var(--good) }
+
+/* ---------- 三聯單:版面跟 新三聯單/單本版面.html 同一份 ---------- */
+.sl {
+  position: relative; display: flex; flex-direction: column; width: 8.5in; min-height: calc(5.5in - 1mm);
+  padding: 4mm 6mm 2.5mm 13mm; background: #fff; color: #111; font: 8.5pt/1.5 "Microsoft JhengHei", "PingFang TC", sans-serif;
+}
+.sl-marks { position: absolute; left: 0; top: 6mm }
+.sl-mark { display: flex; align-items: center; height: 7.6mm }
+.sl-mark i { display: block; width: 5mm; height: 6mm }
+.sl-mark.on i { background: #111 }
+.sl-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 3mm }
+.sl-kinds { line-height: 1.75; font-size: 9pt; white-space: nowrap }
+.sl-cust { font-size: 11pt; font-weight: 700 }
+.sl-head { flex: 1; display: flex; justify-content: center; align-items: flex-start; gap: 4mm }
+.sl-co { line-height: 1.1; font-weight: 700 }
+.sl-co .s { font-size: 11pt }
+.sl-co .b { font-size: 13pt; white-space: nowrap }
+.sl-id { border: .3mm solid #111; padding: 1mm 2mm; line-height: 1.55; white-space: nowrap }
+.sl-no { color: #c00; font-size: 11pt; font-weight: 700 }
+.sl-main { display: grid; grid-template-columns: 1fr 50mm; gap: 3mm; margin-top: 2mm }
+.sl table { width: 100%; border-collapse: collapse; table-layout: fixed }
+.sl th, .sl td { border: .3mm solid #111; padding: .6mm 1mm; text-align: left; vertical-align: middle; font-weight: 400; overflow: hidden }
+.sl th { font-size: 7.5pt; background: #eee; height: 5.5mm }
+.sl td { height: 8.4mm; line-height: 1.25 }
+.sl td.how { font-size: 7pt }
+.sl tr.total td { height: 6.5mm }
+.sl tr.total td.label { text-align: right }
+.sl-side { display: flex; flex-direction: column; gap: 1.6mm }
+.sl-box { border: .3mm solid #111; padding: .8mm 1.5mm; line-height: 1.5 }
+.sl-box .t { font-weight: 700 }
+.sl-box .big { font-size: 11pt; font-weight: 700 }
+.sl-small { font-size: 7pt; color: #333 }
+.sl-sign { display: flex; gap: 6mm; margin-top: 1.6mm }
+.sl-sign span { flex: 1; border-bottom: .3mm solid #111; padding-bottom: 3mm }
+.sl-rule { margin-top: 1.2mm; font-size: 8pt; font-weight: 700 }
+.sl-ply { margin-top: auto; padding-top: 1mm; text-align: right; font-size: 8pt }
+.sl-reweigh { border: .3mm solid #111; margin-top: 2mm; padding: .8mm 1.5mm; font-size: 7.5pt; line-height: 1.7 }
+
+.sl-tel { font-size: 8pt; line-height: 1.6; white-space: nowrap }
+.sl-stamp { display: inline-block; margin-top: 1mm; padding: 0 2mm; border: .4mm solid #c00; color: #c00; font-size: 9pt }
+
+/* ---------- 箱子標籤:A4 一張 24 格,3 欄 8 列,每格 70 x 37 公釐 ---------- */
+.label-sheet { display: grid; grid-template-columns: repeat(3, 70mm); grid-auto-rows: 37mm; padding-top: .5mm; background: #fff; color: #111 }
+.label-cell { padding: 3mm 3.5mm; font: 8pt/1.55 "Microsoft JhengHei", "PingFang TC", sans-serif; overflow: hidden; color: #111 }
+.lb-no { font-size: 12pt; font-weight: 700 }
+.lb-weight { font-size: 11pt; font-weight: 700 }
+.label-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px }
+.label-preview .label-cell { background: #fff; border: 1px dashed var(--line); border-radius: 6px }
+
+/* ---------- 結帳單 A4 ---------- */
+.a4-sheet { background: #fff; color: #111; font: 10.5pt/1.6 "Microsoft JhengHei", "PingFang TC", sans-serif }
+.a4-head h2 { font-size: 16pt; margin: 0 }
+.a4-sub { font-size: 9.5pt; color: #333 }
+.a4-to { margin: 3mm 0; font-size: 11pt }
+.a4-void { color: #c00 }
+.a4-table { width: 100%; border-collapse: collapse; font-size: 10pt }
+.a4-table th, .a4-table td { border: .25mm solid #444; padding: 1mm 2mm; text-align: left; font-weight: 400 }
+.a4-table th { background: #eee }
+.a4-table .r, .a4-sum .r { text-align: right; font-variant-numeric: tabular-nums }
+.a4-sum { margin: 6mm 0 0 auto; border-collapse: collapse; min-width: 70mm; font-size: 11pt }
+.a4-sum td { padding: 1mm 2mm; border-bottom: .25mm solid #999 }
+.a4-sum .strong td { font-weight: 700; font-size: 13pt; border-bottom: .6mm solid #111 }
+.a4-note { margin-top: 4mm; font-size: 9.5pt }
+.a4-preview { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 16px; overflow-x: auto }
+
+/* ---------- 登入 ---------- */
+#gate { display: grid; place-items: center; min-height: 100dvh; padding: 16px; background: var(--side) }
+.login { width: min(100%, 400px); padding: 24px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow) }
+.login h1 { font-size: 21px; color: var(--brand) }
+.login > p { margin: 2px 0 16px }
+.demo-box { margin-top: 18px; padding: 12px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 13.5px }
+.demo-box .chip { min-height: 38px; background: #fff; color: var(--ink) }
+
+/* ---------- 其他小元件 ---------- */
+.section { margin: 14px 2px 6px }
+.link { color: var(--info); text-decoration: underline }
+.block-link { display: block; margin-bottom: 12px; font-weight: 600 }
+.narrow { max-width: 190px }
+.big-number { font-size: 26px; font-weight: 700 }
+.warn-text { color: var(--warn) }
+.grow { flex: 1; min-width: 0 }
+.nowrap { flex-wrap: nowrap }
+.btn.small { min-height: 36px; padding: 0 10px; font-size: 13.5px }
+.draft-line.pad { padding: 10px 14px }
+.draft-line .how { display: block }
+.stock-row.plain { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left }
+.hint { font-style: normal; font-weight: 400; color: var(--ink-3) }
+.more-fields { margin-top: 12px; font-size: 14px; color: var(--ink-2) }
+.more-fields summary { cursor: pointer; min-height: 32px }
+.diff { margin-top: 4px; padding: 6px 8px; border-left: 3px solid var(--amber); background: var(--surface-2); font-size: 13px }
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 8px }
+.photos a { display: block; font-size: 12px; color: var(--ink-3); text-align: center }
+.photos img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--line) }
+.recheck { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line) }
+.mini-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2) }
+.mini-check input { width: 20px; height: 20px; accent-color: var(--brand) }
+.count-row { display: grid; grid-template-columns: 1fr 76px 88px; gap: 6px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line) }
+.count-row:last-child { border-bottom: 0 }
+.count-row .input { padding: 8px; text-align: center }
+.row.cheque { grid-template-columns: 1fr auto; grid-template-areas: "main amt" "meta status" }
+.row.cheque .row-main { display: flex }
+.bar-row { color: inherit }
+
+#print-root { display: none }
+.print-view { display: grid; gap: 12px; justify-items: center }
+.print-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 12px }
+
+@page { size: 8.5in 5.5in; margin: 0 }
+@page a4 { size: A4; margin: 14mm }
+@page labels { size: A4; margin: 0 }
+@media print {
+  html, body { background: #fff }
+  #app, #gate, #sheet-root, #toast, #tip { display: none !important }
+  #print-root { display: block }
+  #print-root .sl { break-after: page; page-break-after: always }
+  #print-root .sl:last-child { break-after: auto; page-break-after: auto }
+  #print-root .a4-sheet { page: a4 }
+  #print-root .label-sheet { page: labels; break-after: page }
+  #print-root .label-sheet:last-child { break-after: auto }
+}
+
+/* ---------- 平板以上 ---------- */
+@media (min-width: 600px) {
+  .tasks { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)) }
+  .tiles { grid-template-columns: repeat(3, 1fr) }
+  .kinds { grid-template-columns: repeat(7, 1fr) }
+  .box-grid { grid-template-columns: repeat(3, 1fr) }
+  .sheet {
+    left: 50%; right: auto; bottom: auto; top: 50%; width: 520px; max-height: 86dvh;
+    transform: translate(-50%, -50%); border-radius: 14px;
+  }
+  .filters { flex-direction: row; flex-wrap: wrap; align-items: center }
+  .filters .chips { flex: 1 1 100% }
+  .filters .search { flex: 1 1 260px }
+  .filter-row { flex: 0 0 auto; grid-template-columns: 150px 150px }
+  .recheck { grid-template-columns: 1fr 120px auto; align-items: center }
+  .row {
+    grid-template-columns: 104px 78px minmax(80px, 1fr) minmax(0, 170px) 96px 100px;
+    grid-template-areas: "no kind name meta amt status"; gap: 10px;
+  }
+  .row-main { display: contents }
+  .row-main .no { grid-area: no }
+  .row-main .tag { grid-area: kind; justify-self: start }
+  .row.cheque { grid-template-columns: 1fr 180px 110px 150px; grid-template-areas: "main meta amt status" }
+  .row-main .name { grid-area: name }
+  .row-status { text-align: right }
+}
+
+@media (min-width: 960px) {
+  #app { display: grid; grid-template-columns: 228px minmax(0, 1fr) }
+  #side { display: block; position: sticky; top: 0; height: 100dvh; background: var(--side) }
+  #tabs { display: none }
+  #top { padding: 0 24px }
+  #view { padding: 20px 24px 40px }
+  body.focus #view { padding-bottom: 40px }
+  .icon-btn { margin-left: 0 }
+  .home-grid { grid-template-columns: 3fr 2fr }
+  .home-grid .tiles { grid-template-columns: 1fr 1fr; align-content: start }
+  .doc-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); align-items: start }
+  .compose { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start }
+  .compose .kinds { grid-template-columns: repeat(4, 1fr) }
+  .count-row { grid-template-columns: 1fr 96px 110px }
+  .compose-side { display: block; position: sticky; top: 70px }
+  .actionbar { position: sticky; bottom: auto; margin-top: 12px; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: none; padding: 12px 14px }
+  .report-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+  #toast { bottom: 28px }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important }
+}
+
+.try-title { font-size: 20px; margin-bottom: 8px }
+.try-note { margin-bottom: 12px }
+.try-tabs { margin-bottom: 12px }
+#saved { position: fixed; left: 16px; right: 16px; bottom: 96px; z-index: 30; padding: 10px 14px; border-radius: 10px; background: var(--brand); color: #fff; text-align: center }
+</style>
+</head>
+<body>
+
+<div id="view">
+  <h1 class="try-title">實秤計數器試按</h1>
+  <div class="note try-note">假資料，不會存，重新整理就回到原樣。<br>試試看：打 16.2 按「加一件」、打字母看打不打得進去、點數字改重量、按 × 刪掉再按復原。</div>
+  <div class="seg try-tabs" id="try-switch">
+    <button class="on" data-tab="open">開單的時候</button>
+    <button data-tab="weigh">倉庫秤的時候</button>
+  </div>
+  <div id="stage" class="stack"></div>
+</div>
+<div id="bar"></div>
+
+<div id="saved" role="status" hidden></div>
+<script type="module">
+/* 實秤計數器:一件一件填重量,件數和總重跟著累加。開單和補重量共用同一個。
+   rows 一格一件,null 是還沒秤的。格子只打得進數字和一個小數點,全形數字會換成半形。 */
+const MAX_WEIGHT = 999;
+
+function cleanWeight(text) {
+  const plain = String(text)
+    .replace(/[０-９．]/g, c => (c === "．" ? "." : String.fromCharCode(c.charCodeAt(0) - 0xfee0)))
+    .replace(/[^\d.]/g, "");
+  const dot = plain.indexOf(".");
+  if (dot < 0) return plain.slice(0, 3);
+  return plain.slice(0, dot).slice(0, 3) + "." + plain.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+}
+
+function numbersOnly(input) {
+  const tidy = () => {
+    const next = cleanWeight(input.value);
+    if (next !== input.value) input.value = next;
+  };
+  input.addEventListener("input", e => { if (!e.isComposing) tidy(); });
+  input.addEventListener("compositionend", tidy);      // 中文輸入法選完字才算打完
+}
+
+const readWeight = text => {
+  const value = Number(text);
+  return text !== "" && value >= 0.01 && value <= MAX_WEIGHT ? value : null;
+};
+
+const sumWeights = values => values.reduce((sum, value) => sum + Math.round((value || 0) * 100), 0) / 100;
+
+/* doc.lines[].boxes 換成一件一格;中間沒秤的件留 null */
+const rowsOf = line => Array.from({ length: line.pieces }, (_, i) => {
+  const box = (line.boxes || []).find(b => b.seq === i + 1);
+  return box ? box.weight : null;
+});
+
+function mountCounter(host, options) {
+  const { unit, planned = null, onChange = () => {}, onFull = null } = options;
+  let rows = options.values && options.values.length ? [...options.values] : [null];
+  let undo = null;
+  host.innerHTML = `<div class="weigher">
+    <div class="weigher-head"><b>一件一件秤</b><span class="num" data-count></span></div>
+    <div class="weigher-entry">
+      <input class="input num" data-entry inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="這一件幾${unit}" aria-label="這一件的重量">
+      <button type="button" class="btn primary" data-add>加一件</button>
+    </div>
+    <div class="weigher-note" data-note role="status"></div>
+    <div class="box-grid weigher-rows" data-rows></div>
+    <div class="muted small" data-left></div>
+  </div>`;
+  const entry = host.querySelector("[data-entry]");
+  const box = host.querySelector("[data-rows]");
+  const note = host.querySelector("[data-note]");
+  numbersOnly(entry);
+
+  function say(text, tone = "", offerUndo = false) {
+    note.className = "weigher-note " + tone;
+    note.textContent = text;
+    if (!offerUndo) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.undo = "1";
+    button.textContent = "復原";
+    note.append(" ", button);
+  }
+
+  const shownRows = () => {
+    let shown = rows.length;
+    while (shown > 0 && rows[shown - 1] == null) shown -= 1;
+    return shown;
+  };
+
+  function count() {
+    const filled = rows.filter(value => value != null).length;
+    const extra = planned != null && rows.length !== planned ? `(單上 ${planned} 件)` : "";
+    host.querySelector("[data-count]").textContent = `${filled} / ${rows.length} 件 · ${sumWeights(rows)} ${unit}${extra}`;
+    const left = rows.length - filled;
+    host.querySelector("[data-left]").textContent = left ? `還有 ${left} 件沒秤` : "";
+  }
+
+  function paint() {
+    box.innerHTML = rows.slice(0, shownRows()).map((value, i) => `<div class="box-cell">
+      <div class="box-cell-head"><span>第 ${i + 1} 件</span><button type="button" data-remove="${i}" aria-label="刪第 ${i + 1} 件">×</button></div>
+      <input class="input num" data-row="${i}" inputmode="decimal" enterkeyhint="next" autocomplete="off" aria-label="第 ${i + 1} 件重量" value="${value ?? ""}">
+    </div>`).join("");
+    box.querySelectorAll("input").forEach(numbersOnly);
+    count();
+  }
+
+  function add() {
+    const weight = readWeight(entry.value);
+    if (weight == null) {
+      say(entry.value ? `重量要在 0.01 到 ${MAX_WEIGHT} 之間` : "先填這一件的重量", "bad");
+      entry.focus();
+      return;
+    }
+    const hole = rows.indexOf(null);
+    const at = hole >= 0 ? hole : rows.length;
+    rows[at] = weight;
+    undo = null;
+    entry.value = "";
+    paint();
+    say(`第 ${at + 1} 件 ${weight} ${unit}`);
+    box.scrollTop = box.scrollHeight;
+    entry.focus();
+    onChange([...rows]);
+    if (onFull && !rows.includes(null)) onFull();
+  }
+
+  function drop(index) {
+    undo = { index, value: rows[index], only: rows.length === 1 };
+    rows.splice(index, 1);
+    if (!rows.length) rows = [null];
+    paint();
+    say(`刪掉第 ${index + 1} 件`, "", true);
+    onChange([...rows]);
+  }
+
+  function restore() {
+    if (undo.only) rows = [undo.value]; else rows.splice(undo.index, 0, undo.value);
+    undo = null;
+    paint();
+    say("復原了");
+    onChange([...rows]);
+  }
+
+  host.addEventListener("click", e => {
+    const remove = e.target.closest("[data-remove]");
+    if (e.target.closest("[data-add]")) add();
+    else if (remove) drop(Number(remove.dataset.remove));
+    else if (e.target.closest("[data-undo]") && undo) restore();
+  });
+  host.querySelector("[data-add]").addEventListener("pointerdown", e => e.preventDefault());    // 手機按了鍵盤不要收起來
+  entry.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); add(); }
+  });
+  box.addEventListener("input", e => {
+    rows[Number(e.target.dataset.row)] = readWeight(e.target.value);
+    count();
+    onChange([...rows]);
+  });
+  box.addEventListener("change", e => {
+    if (e.target.value && readWeight(e.target.value) == null) {
+      e.target.value = "";
+      say(`重量要在 0.01 到 ${MAX_WEIGHT} 之間`, "bad");
+    }
+  });
+  box.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    (box.querySelector(`[data-row="${Number(e.target.dataset.row) + 1}"]`) || entry).focus();
+  });
+  paint();
+
+  return {
+    values: () => [...rows],
+    focus: () => entry.focus(),
+    /* 件數格改了:多的補空格,少的只拿掉還沒秤的,秤過的不會被件數格吃掉 */
+    setPieces(want) {
+      const target = Math.max(1, want);
+      while (rows.length < target) rows.push(null);
+      while (rows.length > target && rows[rows.length - 1] == null) rows.pop();
+      if (rows.length > target) say(`第 ${rows.length} 件已經秤了,要少一件請按那一件的 ×`, "bad");
+      paint();
+      onChange([...rows]);
+      return rows.length;
+    },
+  };
+}
+
+
+const $ = (s, root = document) => root.querySelector(s);
+const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+const money = n => "$" + Math.round(n).toLocaleString("en-US");
+const L = { pieces: 1, mode: "實秤", each: 16, unit: "公斤", price: 240, boxes: [null] };
+let lineCounter = null;
+
+function lineFigures() {
+  if (L.mode === "計件") return { text: `${L.pieces} 件`, amount: L.pieces * L.price };
+  if (L.mode === "定重") {
+    const weight = Math.round(L.pieces * L.each * 100) / 100;
+    return { text: `${weight} ${L.unit}`, amount: weight * L.price };
+  }
+  if (L.boxes.includes(null)) return { text: "還沒秤完也能開單，單號先給，倉庫秤完補重量", amount: null };
+  const weight = sumWeights(L.boxes);
+  return { text: `${weight} ${L.unit}`, amount: weight * L.price };
+}
+
+function refreshLine() {
+  const f = lineFigures();
+  $("#l-note").textContent = f.text;
+  $("#l-sub").textContent = f.amount == null ? "等秤重" : money(f.amount);
+}
+
+function renderOpen() {
+  $("#stage").innerHTML = `
+    <div class="card">
+      <div class="card-title">羊腩<span class="muted">示範客戶</span></div>
+      <div class="field"><span>件數</span>
+        <div class="stepper"><button data-step="-1" aria-label="少一件">−</button>
+          <input id="l-pieces" class="input num" inputmode="numeric" value="${L.pieces}" aria-label="件數">
+          <button data-step="1" aria-label="多一件">＋</button></div></div>
+      <div class="field"><span>計價方式</span>
+        <div class="seg">${["定重", "實秤", "計件"].map(m => `<button class="${m === L.mode ? "on" : ""}" data-mode="${m}">${m}</button>`).join("")}</div></div>
+      <div class="cols field-row">
+        ${L.mode === "定重" ? `<label class="field"><span>每件重量</span><input id="l-each" class="input num" inputmode="decimal" value="${L.each}"></label>` : ""}
+        <label class="field"><span>單位</span><select id="l-unit" class="input">${["公斤", "斤", "磅"].map(u => `<option ${u === L.unit ? "selected" : ""}>${u}</option>`).join("")}</select></label>
+        <label class="field"><span>單價(每${L.unit})</span><input id="l-price" class="input num" inputmode="decimal" value="${L.price}"></label>
+      </div>
+      <div id="l-counter"></div>
+      <div class="sub-total"><span class="muted small" id="l-note"></span><b class="num" id="l-sub"></b></div>
+    </div>`;
+  $("#bar").innerHTML = `<div class="actionbar"><div class="sum" id="done"></div><button class="btn primary big" data-save-line>加進單子</button></div>`;
+  lineCounter = null;
+  if (L.mode === "實秤") {
+    lineCounter = mountCounter($("#l-counter"), {
+      unit: L.unit, values: L.boxes,
+      onChange(values) {
+        L.boxes = values;
+        L.pieces = values.length;
+        const input = $("#l-pieces");
+        if (document.activeElement !== input) input.value = values.length;
+        refreshLine();
+      },
+    });
+  }
+  $("#l-pieces").addEventListener("input", e => {
+    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 3);
+    L.pieces = Number(e.target.value) || 1;
+    if (lineCounter) lineCounter.setPieces(L.pieces);
+    refreshLine();
+  });
+  $("#l-pieces").addEventListener("change", e => { e.target.value = L.pieces = lineCounter ? L.boxes.length : L.pieces; });
+  const each = $("#l-each");
+  if (each) { numbersOnly(each); each.addEventListener("input", e => { L.each = Number(e.target.value) || 0; refreshLine(); }); }
+  numbersOnly($("#l-price"));
+  $("#l-price").addEventListener("input", e => { L.price = Number(e.target.value) || 0; refreshLine(); });
+  $("#l-unit").addEventListener("change", e => { L.unit = e.target.value; renderOpen(); });
+  refreshLine();
+}
+
+const SLIP = [{ name: "牛腱", pieces: 5, boxes: null, counter: null }, { name: "牛尾・去骨", pieces: 3, boxes: null, counter: null }];
+
+function weighCount() {
+  const all = SLIP.flatMap(line => line.counter.values());
+  $("#w-count").textContent = `${all.filter(v => v != null).length} / ${all.length} 件`;
+}
+
+function renderWeigh() {
+  $("#stage").innerHTML = `
+    <div class="note">示範客戶，單號 T000-0001。每箱秤完填一格，連箱一起秤。</div>
+    ${SLIP.map((line, i) => `<div class="card"><div class="card-title">${line.name}<span class="muted">單上 ${line.pieces} 件</span></div><div data-line="${i}"></div></div>`).join("")}`;
+  $("#bar").innerHTML = `<div class="actionbar compact"><div class="sum"><small>已填</small><b class="num" id="w-count"></b></div>
+    <button class="btn" data-weigh-save="partial">先存</button><button class="btn primary big" data-weigh-save="all">存重量</button></div>`;
+  SLIP.forEach((line, i) => {
+    line.counter = mountCounter($(`[data-line="${i}"]`), {
+      unit: "公斤", planned: line.pieces, values: line.boxes || Array(line.pieces).fill(null),
+      onChange(values) { line.boxes = values; weighCount(); },
+      onFull() {
+        const next = SLIP.find(other => other.counter && other.counter.values().includes(null));
+        if (next) next.counter.focus();
+      },
+    });
+  });
+  weighCount();
+}
+
+function say(text) {
+  const box = $("#saved");
+  box.textContent = text;
+  box.hidden = false;
+  clearTimeout(say.timer);
+  say.timer = setTimeout(() => { box.hidden = true; }, 3500);
+}
+
+document.addEventListener("click", e => {
+  const tab = e.target.closest("[data-tab]");
+  if (tab) {
+    $$("#try-switch button").forEach(b => b.classList.toggle("on", b === tab));
+    (tab.dataset.tab === "open" ? renderOpen : renderWeigh)();
+    return;
+  }
+  const step = e.target.closest("[data-step]");
+  if (step) {
+    const input = $("#l-pieces");
+    L.pieces = Math.max(1, (Number(input.value) || 0) + Number(step.dataset.step));
+    if (lineCounter) L.pieces = lineCounter.setPieces(L.pieces);
+    input.value = L.pieces;
+    refreshLine();
+    return;
+  }
+  const mode = e.target.closest("[data-mode]");
+  if (mode) { L.mode = mode.dataset.mode; renderOpen(); return; }
+  if (e.target.closest("[data-save-line]")) { say("試按頁不會真的存。"); return; }
+  const save = e.target.closest("[data-weigh-save]");
+  if (save) {
+    const left = SLIP.flatMap(line => line.counter.values()).filter(v => v == null).length;
+    if (left && save.dataset.weighSave === "all") say(`還有 ${left} 件沒填。`);
+    else say("試按頁不會真的存。");
+  }
+});
+
+renderOpen();
+
+</script>
+</body>
+</html>
